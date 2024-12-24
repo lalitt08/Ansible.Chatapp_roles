@@ -1,0 +1,21 @@
+---
+# main.yml
+- name: Backend configuration
+  hosts: backend
+  become: yes
+  gather_facts: true
+  vars:
+    allow_world_readable_tmpfiles: true
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  vars_files:
+    - /home/lalit/chatapp_role/roles/backend/vars/main.yml
+  roles:
+    - backend
+
+- name: Frontend configuration
+  hosts: frontend
+  gather_facts: true
+  become: yes
+  roles:
+    - frontend

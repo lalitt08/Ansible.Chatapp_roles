@@ -1,0 +1,182 @@
+---
+- name: Update and upgrade APT packages
+  apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Add "Chatappuser" user without a password
+  user:
+    name: Chatappuser
+    state: present
+    create_home: yes
+    shell: /bin/bash
+
+- name: Ensure no password is set for "Chatappuser" user
+  command: passwd -d Chatappuser
+
+- name: Get Ubuntu release codename
+  command: lsb_release -sc
+  register: ubuntu_codename
+  changed_when: false
+
+- name: Add "universe" repository
+  apt_repository:
+    repo: "deb http://archive.ubuntu.com/ubuntu {{ ubuntu_codename.stdout }} universe"
+    state: present
+
+- name: Install Python 3 and pip
+  apt:
+    name:
+      - python3-pip
+      - python3-venv
+    state: present
+
+- name: Install necessary development tools
+  apt:
+    name:
+      - git
+      - build-essential
+      - libmysqlclient-dev
+      - pkg-config
+      - python3-dbg
+    state: present
+
+- name: Add "Chatappuser" user to sudoers with NOPASSWD privileges
+  lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^Chatappuser'
+    line: 'Chatappuser ALL=(ALL) NOPASSWD:ALL'
+    validate: '/usr/sbin/visudo -cf %s'
+
+- name: Set home directory ownership and permissions for Chatappuser
+  file:
+    path: /home/Chatappuser
+    state: directory
+    owner: Chatappuser
+    group: Chatappuser
+    recurse: yes
+    mode: '0755'
+
+- name: Copy RDS credentials to backend server
+  copy:
+    src: "{{ rds_credentials_file }}"
+    dest: "/home/Chatappuser/rds_data.txt"
+    owner: Chatappuser
+    group: Chatappuser
+
+- name: Create Python virtual environment for Chatappuser
+  shell: |
+    python3 -m venv /home/Chatappuser/venv
+  become: true
+  become_user: Chatappuser
+  args:
+    creates: /home/Chatappuser/venv
+
+- name: Install dependencies inside virtual environment
+  shell: |
+    source /home/Chatappuser/venv/bin/activate && \
+    sudo apt-get update && \
+    sudo apt-get install -y libpq-dev python3-dev build-essential && \
+    sudo apt-get install -y mysql-client && \
+    pip install --upgrade pip && \
+    pip install Django mysqlclient wheel psycopg2-binary djangorestframework
+  become: true
+  become_user: Chatappuser
+  args:
+    executable: /bin/bash
+
+- name: Check if Django_Chatapp repository exists
+  stat:
+    path: "/Django_Chatapp/.git"
+  register: git_repo
+
+- name: Ensure Django_Chatapp directory exists
+  file:
+    path: "/Django_Chatapp"
+    state: directory
+    owner: Chatappuser
+    group: Chatappuser
+    mode: '0777'
+
+- name: Clone the Django_Chatapp repository if not already cloned
+  git:
+    repo: "https://github.com/lalitt08/django-chatapp"
+    dest: "/Django_Chatapp"
+    update: yes
+    clone: yes
+    force: yes
+  become: yes
+  become_user: Chatappuser
+
+- name: Install Python dependencies from requirements.txt
+  shell: |
+    source /home/Chatappuser/venv/bin/activate && \
+    pip install -r /Django_Chatapp/requirements.txt
+  args:
+    executable: /bin/bash
+
+- name: Change ownership of Django_Chatapp directory
+  file:
+    path: /Django_Chatapp
+    state: directory
+    owner: Chatappuser
+    group: Chatappuser
+    recurse: yes
+
+- name: Check if settings.py file exists
+  stat:
+    path: /Django_Chatapp/fundoo/fundoo/settings.py
+  register: settings_file
+
+- name: Remove existing DATABASES block
+  replace:
+    path: /Django_Chatapp/fundoo/fundoo/settings.py
+    regexp: "(?s)# Database.*?#sagar kadam"
+    replace: ""
+  when: settings_file.stat.exists
+
+- name: Add the new DATABASES block taking variables from variables file
+  blockinfile:
+    path: /Django_Chatapp/fundoo/fundoo/settings.py
+    marker: "# Database"
+    block: |
+      DATABASES = {
+          'default': {
+              'ENGINE': 'django.db.backends.mysql',
+              'NAME': "{{ db_namee }}",
+              'USER': "{{ db_userr }}",
+              'PASSWORD': "{{ db_passwordd }}",
+              'HOST': "{{ db_hostt }}",
+              'PORT': "{{ db_portt }}",
+          }
+      }
+    state: present
+  when: settings_file.stat.exists
+
+- name: Run makemigrations command
+  raw: bash -c "cd /Django_Chatapp/fundoo && /home/Chatappuser/venv/bin/python3 manage.py makemigrations"
+
+- name: Run migrate command
+  raw: bash -c "export DB_NAME={{ db_namee }} && export DB_USER={{ db_userr }} && export DB_PASSWORD={{ db_passwordd }} && export DB_HOST={{ db_hostt }} && export DB_PORT={{ db_portt }} && cd /Django_Chatapp/fundoo && /home/Chatappuser/venv/bin/python3 manage.py migrate"
+
+- name: Create the backend service configuration
+  template:
+    src: "/home/lalit/chatapp_project/Backend.j2"
+    dest: /etc/systemd/system/django-backend.service
+    mode: '0644'
+  become: yes
+
+- name: Reload systemd daemon
+  command: systemctl daemon-reload
+
+- name: Start and enable Django service
+  systemd:
+    name: django-backend
+    state: started
+    enabled: true
+
+- name: Restart Django service explicitly
+  command: sudo systemctl restart django-backend.service
+
+# tasks file for backend
