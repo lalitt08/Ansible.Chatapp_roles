@@ -3,9 +3,7 @@
 db_namee: "chatappdb"
 db_userr: "admin"
 db_passwordd: "admin123"
-db_hostt: "localhost"
+db_hostt: "mydbinstance.c7cmiq48y5fd.us-east-2.rds.amazonaws.com"
 db_portt: "3306"
-access_key_file: "/home/lalit/chatapp_project/access_key.pem"
-variables_file: "/home/lalit/chatapp_project/variables.yml"
 
 # vars file for backend

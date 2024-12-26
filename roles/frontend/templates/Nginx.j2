@@ -1,9 +1,9 @@
 server {
     listen 80;
-    server_name 18.189.193.105;  # Hardcoded IP or hostname
+    server_name 3.22.71.233;  # Hardcoded IP or hostname
 
     location / {
-        proxy_pass http://10.0.3.92:8000;  # Hardcoded backend server IP
+        proxy_pass http://10.0.3.185:8000;  # Hardcoded backend server IP
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

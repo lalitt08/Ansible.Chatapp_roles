@@ -60,7 +60,7 @@
 
 - name: Copy RDS credentials to backend server
   copy:
-    src: "{{ rds_credentials_file }}"
+    src: "/home/lalit/chatapp_role/roles/backend/files/rds_data.txt"
     dest: "/home/Chatappuser/rds_data.txt"
     owner: Chatappuser
     group: Chatappuser
@@ -162,7 +162,7 @@
 
 - name: Create the backend service configuration
   template:
-    src: "/home/lalit/chatapp_project/Backend.j2"
+    src: "/home/lalit/chatapp_role/roles/backend/templates/Backend.j2"
     dest: /etc/systemd/system/django-backend.service
     mode: '0644'
   become: yes

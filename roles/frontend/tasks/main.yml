@@ -20,7 +20,7 @@
 
 - name: Create the Nginx configuration file from template
   template:
-    src: /home/lalit/chatapp_roles/roles/frontend/templates/Nginx.j2
+    src: /home/lalit/chatapp_role/roles/frontend/templates/Nginx.j2
     dest: /etc/nginx/sites-enabled/default
     mode: '0644'
   notify:
@@ -29,7 +29,4 @@
 - name: Test Nginx configuration
   command: nginx -t
 
-- name: Restart Nginx
-  notify:
-    - restart nginx
 # tasks file for frontend

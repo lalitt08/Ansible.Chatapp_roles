@@ -1,0 +1,5 @@
+export DB_NAME="chatappdb"
+export DB_USER="admin"
+export DB_PASSWORD="admin123"
+export DB_HOST="mydbinstance.c7cmiq48y5fd.us-east-2.rds.amazonaws.com"
+export DB_PORT="3306"
