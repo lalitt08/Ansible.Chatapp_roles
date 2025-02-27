@@ -1,7 +1,7 @@
 ---
 - name: Copy the access_key.pem file
   copy:
-    src: /home/lalit/chatapp_project/access_key.pem
+    src: /home/ubuntu/sample
     dest: /home/ubuntu/access_key.pem
     owner: ubuntu
     group: ubuntu
@@ -20,7 +20,7 @@
 
 - name: Create the Nginx configuration file from template
   template:
-    src: /home/lalit/chatapp_role/roles/frontend/templates/Nginx.j2
+    src: "{{ playbook_dir }}/roles/frontend/templates/Nginx.j2"
     dest: /etc/nginx/sites-enabled/default
     mode: '0644'
   notify:
@@ -28,5 +28,3 @@
 
 - name: Test Nginx configuration
   command: nginx -t
-
-# tasks file for frontend
